@@ -1,0 +1,24 @@
+# Node
+node_modules/
+dist/
+build/
+
+# Java / Maven
+target/
+.m2/
+*.class
+
+# .NET
+bin/
+obj/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
