@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pl.fitcore.api.dto.ApiMessageResponse;
 import pl.fitcore.api.dto.ReservationRequest;
+import pl.fitcore.api.security.CurrentMemberGuard;
 import pl.fitcore.api.support.DemoMemberResolver;
 import pl.fitcore.backend.app.FitnessBackendService;
 import pl.fitcore.backend.domain.GymClass;
@@ -19,10 +20,16 @@ import pl.fitcore.backend.domain.ReservationResult;
 public class ClassesController {
     private final FitnessBackendService service;
     private final DemoMemberResolver memberResolver;
+    private final CurrentMemberGuard currentMemberGuard;
 
-    public ClassesController(FitnessBackendService service, DemoMemberResolver memberResolver) {
+    public ClassesController(
+        FitnessBackendService service,
+        DemoMemberResolver memberResolver,
+        CurrentMemberGuard currentMemberGuard
+    ) {
         this.service = service;
         this.memberResolver = memberResolver;
+        this.currentMemberGuard = currentMemberGuard;
     }
 
     @GetMapping
@@ -32,12 +39,13 @@ public class ClassesController {
 
     @GetMapping("/reservations/{memberId}")
     public List<GymClass> reservations(@PathVariable String memberId) {
-        return service.reservationsForMember(memberId);
+        return service.reservationsForMember(currentMemberGuard.requireCurrentMember(memberId));
     }
 
     @PostMapping("/reservations")
     public ApiMessageResponse reserve(@RequestBody ReservationRequest request) {
-        String memberId = memberResolver.resolveMemberId(request.getMemberId(), request.getUser());
+        String requestedMemberId = memberResolver.resolveMemberId(request.getMemberId(), request.getUser());
+        String memberId = currentMemberGuard.requireCurrentMember(requestedMemberId);
         String classId = resolveClassId(request);
         ReservationResult result = service.reserveClass(memberId, classId);
         return new ApiMessageResponse(result.isAccepted(), result.getMessage());

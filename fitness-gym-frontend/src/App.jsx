@@ -13,7 +13,13 @@ import {
   TrainersView
 } from './components/AppViews.jsx';
 import { classes as fallbackClasses, exercises as fallbackExercises, plans as fallbackPlans } from './data/content.js';
-import { getFromApi, postToApi } from './services/api.js';
+import {
+  getFromApi,
+  getStoredAuthSession,
+  logoutFromApi,
+  postToApi,
+  saveAuthSession
+} from './services/api.js';
 
 const navItems = [
   { id: 'dashboard', label: 'Panel', icon: Activity },
@@ -37,10 +43,7 @@ export default function App() {
   const [apiState, setApiState] = useState({ status: 'idle', message: 'System gotowy do pracy.' });
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState('register');
-  const [authUser, setAuthUser] = useState(() => {
-    const stored = localStorage.getItem('fitcore-user');
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [authUser, setAuthUser] = useState(getStoredAuthSession);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -65,12 +68,26 @@ export default function App() {
   }, [authUser?.memberId]);
 
   useEffect(() => {
-    if (authUser) {
-      localStorage.setItem('fitcore-user', JSON.stringify(authUser));
-    } else {
-      localStorage.removeItem('fitcore-user');
-    }
+    saveAuthSession(authUser);
   }, [authUser]);
+
+  useEffect(() => {
+    function expireSession() {
+      setAuthUser(null);
+      setApiState({ status: 'warning', message: 'Sesja wygasla. Zaloguj sie ponownie.' });
+    }
+
+    function updateSession(event) {
+      setAuthUser((current) => current ? { ...current, ...event.detail } : current);
+    }
+
+    window.addEventListener('fitcore-auth-expired', expireSession);
+    window.addEventListener('fitcore-auth-refreshed', updateSession);
+    return () => {
+      window.removeEventListener('fitcore-auth-expired', expireSession);
+      window.removeEventListener('fitcore-auth-refreshed', updateSession);
+    };
+  }, []);
 
   async function loadInitialData() {
     const [classesResult, trainersResult, exercisesResult, rankingResult] = await Promise.all([
@@ -150,7 +167,11 @@ export default function App() {
       memberId: data.memberId,
       name: data.name ?? payload.name ?? payload.email.split('@')[0],
       email: data.email ?? payload.email,
-      qrCode: data.qrCode ?? `QR-${data.memberId}`
+      qrCode: data.qrCode ?? `QR-${data.memberId}`,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      tokenType: data.tokenType,
+      expiresIn: data.expiresIn
     });
     setAuthOpen(false);
     setApiState({ status: 'success', message: authMode === 'register' ? 'Konto utworzone i aktywne.' : 'Zalogowano do panelu.' });
@@ -162,7 +183,8 @@ export default function App() {
     setAuthOpen(true);
   }
 
-  function logout() {
+  async function logout() {
+    await logoutFromApi();
     setAuthUser(null);
     setSelectedPlan('Brak');
     setActiveView('dashboard');

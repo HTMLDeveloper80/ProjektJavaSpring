@@ -42,7 +42,8 @@ http://localhost:8080/api
 GET  /api/health
 POST /api/auth/register
 POST /api/auth/login
-POST /api/auth/client-panel
+POST /api/auth/refresh
+POST /api/auth/logout
 GET  /api/classes
 POST /api/classes/reservations
 GET  /api/trainers
@@ -50,6 +51,41 @@ POST /api/plans/select
 POST /api/access/checkin
 POST /api/workouts/start
 POST /api/members/{memberId}/training-plan
+```
+
+## JWT i logowanie
+
+Rejestracja i logowanie zwracaja:
+
+```json
+{
+  "accessToken": "...",
+  "refreshToken": "...",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+```
+
+Prywatne endpointy wymagaja naglowka:
+
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Access token jest wazny 15 minut. Refresh token jest wazny 7 dni, jest
+rotowany przy kazdym odswiezeniu i uniewazniany podczas wylogowania.
+
+Konta demonstracyjne z `data.sql` maja domyslne haslo:
+
+```txt
+demo123
+```
+
+Przed wdrozeniem ustaw wlasny sekret i haslo demonstracyjne:
+
+```powershell
+$env:FITCORE_JWT_SECRET="<base64-sekret-minimum-32-bajty>"
+$env:FITCORE_DEMO_PASSWORD="<inne-haslo>"
 ```
 
 ## Baza SQL

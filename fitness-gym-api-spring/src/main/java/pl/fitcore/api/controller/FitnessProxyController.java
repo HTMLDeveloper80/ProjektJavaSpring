@@ -10,16 +10,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import pl.fitcore.api.security.CurrentMemberGuard;
 
 @RestController
 @RequestMapping("/api/fitness")
 public class FitnessProxyController {
     private final RestTemplate restTemplate;
     private final String baseUrl;
+    private final CurrentMemberGuard currentMemberGuard;
 
-    public FitnessProxyController(RestTemplate restTemplate, @Value("${fitcore.dotnet-api.base-url}") String baseUrl) {
+    public FitnessProxyController(
+        RestTemplate restTemplate,
+        @Value("${fitcore.dotnet-api.base-url}") String baseUrl,
+        CurrentMemberGuard currentMemberGuard
+    ) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
+        this.currentMemberGuard = currentMemberGuard;
     }
 
     @GetMapping("/exercises")
@@ -29,16 +36,19 @@ public class FitnessProxyController {
 
     @GetMapping("/members/{memberId}/dashboard")
     public Object dashboard(@PathVariable String memberId) {
+        currentMemberGuard.requireCurrentMember(memberId);
         return get("/members/" + memberId + "/dashboard");
     }
 
     @GetMapping("/members/{memberId}/records")
     public Object records(@PathVariable String memberId) {
+        currentMemberGuard.requireCurrentMember(memberId);
         return get("/members/" + memberId + "/records");
     }
 
     @PostMapping("/members/{memberId}/records")
     public Object addRecord(@PathVariable String memberId, @RequestBody Map<String, Object> body) {
+        currentMemberGuard.requireCurrentMember(memberId);
         return post("/members/" + memberId + "/records", body);
     }
 

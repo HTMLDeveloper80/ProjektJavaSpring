@@ -6,6 +6,26 @@ CREATE TABLE IF NOT EXISTS members (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS auth_credentials (
+    member_id VARCHAR(32) PRIMARY KEY,
+    password_hash VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_auth_credentials_member
+        FOREIGN KEY (member_id) REFERENCES members(id)
+);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id VARCHAR(36) PRIMARY KEY,
+    member_id VARCHAR(32) NOT NULL,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_refresh_tokens_member
+        FOREIGN KEY (member_id) REFERENCES members(id)
+);
+
 CREATE TABLE IF NOT EXISTS memberships (
     id VARCHAR(64) PRIMARY KEY,
     member_id VARCHAR(32) NOT NULL,
@@ -69,3 +89,5 @@ CREATE INDEX IF NOT EXISTS idx_memberships_member_id ON memberships(member_id);
 CREATE INDEX IF NOT EXISTS idx_gym_classes_starts_at ON gym_classes(starts_at);
 CREATE INDEX IF NOT EXISTS idx_reservations_class_id ON reservations(class_id);
 CREATE INDEX IF NOT EXISTS idx_check_ins_member_id ON check_ins(member_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_member_id ON refresh_tokens(member_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
